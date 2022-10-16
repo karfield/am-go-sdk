@@ -9,13 +9,24 @@ import (
 	"google.golang.org/grpc/metadata"
 	"log"
 	"os"
+	"runtime/debug"
+	"strconv"
 )
 
-type RunOnce func(ctx context.Context) (output string, result []byte, error error)
+type RunOnce func(ctx context.Context) (result []byte, output *string, error error)
 
-func Run(port int, run RunOnce) {
+func Run(run RunOnce) {
 	if run == nil {
 		panic("missing run func")
+	}
+	port := os.Getenv("AM_PORT")
+	if port == "" {
+		panic("missing environment AM_PORT")
+	} else {
+		_, err := strconv.ParseInt(port, 10, 16)
+		if err != nil {
+			panic("illegal AM_PORT environment value")
+		}
 	}
 
 	call := func(ctx *TaskContext) {
@@ -23,9 +34,8 @@ func Run(port int, run RunOnce) {
 			if r := recover(); r != nil {
 				log.Printf("handle task failed: %v", r)
 				_, err := ctx.baseClt.FinishWithFailure(context.Background(), &internal.ExecuteFailure{
-					TraceId: ctx.traceId,
-					Stage:   "",
-					Error:   fmt.Sprintf("%v", r),
+					Error:      fmt.Sprintf("%v", r),
+					PanicStack: debug.Stack(),
 				})
 				if err != nil {
 					log.Printf("fails to report fatal message: %s", err)
@@ -33,26 +43,19 @@ func Run(port int, run RunOnce) {
 			}
 		}()
 
-		if port, result, err := run(ctx); err != nil {
+		if result, output, err := run(ctx); err != nil {
 			_, err := ctx.baseClt.FinishWithFailure(
 				context.Background(),
 				&internal.ExecuteFailure{
-					TraceId: ctx.traceId,
-					Stage:   "",
-					Error:   err.Error(),
+					Error: err.Error(),
 				},
 			)
 			if err != nil {
 				log.Printf("fails to report failure: %s", err)
 			}
 		} else {
-			if port == "" {
-				port = "output"
-			}
-
 			_, err := ctx.baseClt.FinishWithResult(context.Background(), &internal.ExecuteResult{
-				TraceId:       ctx.traceId,
-				PortIndicator: &port,
+				PortIndicator: output,
 				Output:        result,
 			})
 			if err != nil {
@@ -61,14 +64,14 @@ func Run(port int, run RunOnce) {
 		}
 	}
 
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 
 	baseClient := internal.NewBaseIpcClient(conn)
-	response, err := baseClient.Capabilities(context.Background(), &internal.CapabilitiesRequest{}, metaHeader())
+	response, err := baseClient.Capabilities(context.Background(), &internal.CapabilitiesRequest{}, metaHeader(nil))
 	if err != nil {
 
 	}
@@ -82,7 +85,7 @@ func Run(port int, run RunOnce) {
 		ocrClient = internal.NewOcrIpcClient(conn)
 	}
 
-	if consumer, err := baseClient.ConsumeTask(context.Background(), &internal.ConsumeTaskRequest{}, metaHeader()); err != nil {
+	if consumer, err := baseClient.ConsumeTask(context.Background(), &internal.ConsumeTaskRequest{}, metaHeader(nil)); err != nil {
 		log.Fatalf("unable to consume task: %s", err)
 	} else {
 		for {
@@ -92,7 +95,6 @@ func Run(port int, run RunOnce) {
 			}
 
 			ctx := TaskContext{
-				traceId: msg.GetTraceId(),
 				input:   msg.GetPayload(),
 				baseClt: baseClient,
 				sqlClt:  sqlClient,
@@ -104,8 +106,15 @@ func Run(port int, run RunOnce) {
 	}
 }
 
-func metaHeader() grpc.CallOption {
+func metaHeader(ctx context.Context) grpc.CallOption {
 	md := metadata.New(map[string]string{})
 	md.Append("pid", fmt.Sprintf("%d", os.Getpid()))
+	if ctx != nil {
+		if value := ctx.Value(TraceID{}); value != nil {
+			if tid, ok := value.(string); ok {
+				md.Append("tid", tid)
+			}
+		}
+	}
 	return grpc.Header(&md)
 }

@@ -34,7 +34,7 @@ func Log(ctx context.Context, level uint32, message string, extra map[string]int
 				Level:     internal.LogLevel(level),
 				Message:   message,
 				ExtraJson: extraJson,
-			}, metaHeader())
+			}, metaHeader(ctx))
 			if err != nil {
 				log.Printf("fails to save logs: %s", err)
 			}
@@ -54,7 +54,7 @@ func QuerySql(ctx context.Context, defaultDbCode *string, sql string, args inter
 				}
 			}
 			result, err := clt.QuerySingleSql(context.Background(),
-				&internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode}, metaHeader())
+				&internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode}, metaHeader(ctx))
 			if err != nil {
 				return nil, fmt.Errorf("fails to query sql: %s, error: %s", sql, err)
 			}
@@ -75,7 +75,7 @@ func ExecuteSql(ctx context.Context, defaultDbCode *string, sql string, args int
 			if err != nil {
 				return 0, 0, fmt.Errorf("failed to marshal arguments error: %s", err)
 			}
-			result, err := clt.ExecuteSingleSql(context.Background(), &internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode}, metaHeader())
+			result, err := clt.ExecuteSingleSql(context.Background(), &internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode}, metaHeader(ctx))
 			if err != nil {
 				return 0, 0, fmt.Errorf("failed to execute sql: %s, error: %s", sql, err)
 			}
@@ -98,7 +98,7 @@ func ResolveCaptchaImage(ctx context.Context, width, height uint32, format strin
 				Format:   format,
 				Image:    image,
 				Provider: provider,
-			}, metaHeader())
+			}, metaHeader(ctx))
 			if err != nil {
 				return "", fmt.Errorf("failed to decode captcha image: %s", err)
 			}
