@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/chromedp/chromedp"
 	"github.com/karfield/am-go-sdk/internal"
 	"log"
 )
@@ -106,4 +107,17 @@ func ResolveCaptchaImage(ctx context.Context, width, height uint32, format strin
 		}
 	}
 	return "", nil
+}
+
+func NewBrowser(ctx context.Context, opts ...chromedp.BrowserOption) (*chromedp.Browser, error) {
+	if value := ctx.Value(cdpClient{}); value != nil {
+		if cdpClt, ok := value.(internal.CdpIpcClient); ok {
+			response, err := cdpClt.GetBrowserwsUrl(context.Background(), &internal.GetBrowserWsUrlRequest{}, metaHeader(ctx))
+			if err != nil {
+				return nil, fmt.Errorf("fails to get browser ws-url: %E", err)
+			}
+			return chromedp.NewBrowser(ctx, response.GetWsUrl(), opts...)
+		}
+	}
+	return nil, nil
 }

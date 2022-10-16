@@ -9,6 +9,7 @@ type TaskContext struct {
 	baseClt internal.BaseIpcClient
 	sqlClt  internal.SqlIpcClient
 	ocrClt  internal.OcrIpcClient
+	cdpClt  internal.CdpIpcClient
 	traceId string
 	input   []byte
 }
@@ -33,6 +34,7 @@ type InputKey struct{}
 type baseClient struct{}
 type sqlClient struct{}
 type ocrClient struct{}
+type cdpClient struct{}
 
 func (t *TaskContext) Value(key any) any {
 	switch key.(type) {
@@ -46,6 +48,8 @@ func (t *TaskContext) Value(key any) any {
 		return t.sqlClt
 	case ocrClient:
 		return t.ocrClt
+	case cdpClient:
+		return t.cdpClt
 	}
 	return nil
 }
