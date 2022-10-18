@@ -73,7 +73,7 @@ func Run(run RunOnce) {
 	baseClient := internal.NewBaseIpcClient(conn)
 	response, err := baseClient.Capabilities(context.Background(), &internal.CapabilitiesRequest{}, metaHeader(nil))
 	if err != nil {
-
+		log.Fatalf("fails to obtain bot capabilities: %s", err)
 	}
 
 	var sqlClient internal.SqlIpcClient
@@ -108,13 +108,8 @@ func Run(run RunOnce) {
 
 func metaHeader(ctx context.Context) grpc.CallOption {
 	md := metadata.New(map[string]string{})
-	md.Append("pid", fmt.Sprintf("%d", os.Getpid()))
-	if ctx != nil {
-		if value := ctx.Value(TraceID{}); value != nil {
-			if tid, ok := value.(string); ok {
-				md.Append("tid", tid)
-			}
-		}
-	}
+	md.Append("Process-Id", fmt.Sprintf("%d", os.Getpid()))
+	md.Append("Trace-Id", os.Getenv("AM_TRACE_ID"))
+	md.Append("Instance-Id", os.Getenv("AM_INSTANCE_ID"))
 	return grpc.Header(&md)
 }
