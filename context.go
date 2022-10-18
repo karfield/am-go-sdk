@@ -25,30 +25,31 @@ func (t *TaskContext) Done() <-chan struct{} {
 }
 
 func (t *TaskContext) Err() error {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
-type TraceID struct{}
-type InputKey struct{}
-type baseClient struct{}
-type sqlClient struct{}
-type ocrClient struct{}
-type cdpClient struct{}
+type (
+	traceIdKey    struct{}
+	inputKey      struct{}
+	baseClientKey struct{}
+	sqlClientKey  struct{}
+	ocrClientKey  struct{}
+	cdpClientKey  struct{}
+)
 
 func (t *TaskContext) Value(key any) any {
 	switch key.(type) {
-	case TraceID:
+	case traceIdKey:
 		return t.traceId
-	case InputKey:
+	case inputKey:
 		return t.input
-	case baseClient:
+	case baseClientKey:
 		return t.baseClt
-	case sqlClient:
+	case sqlClientKey:
 		return t.sqlClt
-	case ocrClient:
+	case ocrClientKey:
 		return t.ocrClt
-	case cdpClient:
+	case cdpClientKey:
 		return t.cdpClt
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/karfield/am-go-sdk/internal"
 	"log"
+	"os"
 )
 
 const (
@@ -17,8 +18,33 @@ const (
 	LogFatalLevel
 )
 
+func BotID() string         { return os.Getenv("AM_BOT_ID") }
+func InstanceID() string    { return os.Getenv("AM_INSTANCE_ID") }
+func TaskCode() string      { return os.Getenv("AM_TASK_CODE") }
+func TaskVersion() string   { return os.Getenv("AM_TASK_VERSION") }
+func ComponentCode() string { return os.Getenv("AM_COMPONENT_CODE") }
+func ComponentType() string { return os.Getenv("AM_COMPONENT_TYPE") }
+
+func TraceID(ctx context.Context) string {
+	if value := ctx.Value(traceIdKey{}); value != nil {
+		if id, ok := value.(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+func InputData(ctx context.Context) []byte {
+	if value := ctx.Value(inputKey{}); value != nil {
+		if data, ok := value.([]byte); ok {
+			return data
+		}
+	}
+	return nil
+}
+
 func Log(ctx context.Context, level uint32, message string, extra map[string]interface{}) {
-	if clt := ctx.Value(baseClient{}); clt != nil {
+	if clt := ctx.Value(baseClientKey{}); clt != nil {
 		if clt, ok := clt.(internal.BaseIpcClient); ok {
 			var (
 				extraJson []byte
@@ -44,7 +70,7 @@ func Log(ctx context.Context, level uint32, message string, extra map[string]int
 }
 
 func QuerySql(ctx context.Context, defaultDbCode *string, sql string, args interface{}) ([][]byte, error) {
-	if clt := ctx.Value(sqlClient{}); clt != nil {
+	if clt := ctx.Value(sqlClientKey{}); clt != nil {
 		if clt, ok := clt.(internal.SqlIpcClient); ok {
 			var content []byte
 			var err error
@@ -70,7 +96,7 @@ func QuerySql(ctx context.Context, defaultDbCode *string, sql string, args inter
 }
 
 func ExecuteSql(ctx context.Context, defaultDbCode *string, sql string, args interface{}) (lastInsertId uint64, rowsEffected uint64, err error) {
-	if clt := ctx.Value(sqlClient{}); clt != nil {
+	if clt := ctx.Value(sqlClientKey{}); clt != nil {
 		if clt, ok := clt.(internal.SqlIpcClient); ok {
 			content, err := json.Marshal(args)
 			if err != nil {
@@ -91,7 +117,7 @@ func ExecuteSql(ctx context.Context, defaultDbCode *string, sql string, args int
 }
 
 func ResolveCaptchaImage(ctx context.Context, width, height uint32, format string, image []byte, provider *string) (string, error) {
-	if ocrClt := ctx.Value(ocrClient{}); ocrClt != nil {
+	if ocrClt := ctx.Value(ocrClientKey{}); ocrClt != nil {
 		if ocrClt, ok := ocrClt.(internal.OcrIpcClient); ok {
 			response, err := ocrClt.ResolveCaptchaImage(context.Background(), &internal.CaptchaImage{
 				Width:    width,
@@ -110,7 +136,7 @@ func ResolveCaptchaImage(ctx context.Context, width, height uint32, format strin
 }
 
 func NewBrowser(ctx context.Context, opts ...chromedp.BrowserOption) (*chromedp.Browser, error) {
-	if value := ctx.Value(cdpClient{}); value != nil {
+	if value := ctx.Value(cdpClientKey{}); value != nil {
 		if cdpClt, ok := value.(internal.CdpIpcClient); ok {
 			response, err := cdpClt.GetBrowserwsUrl(context.Background(), &internal.GetBrowserWsUrlRequest{}, metaHeader(ctx))
 			if err != nil {

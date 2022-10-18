@@ -95,6 +95,7 @@ func Run(run RunOnce) {
 			}
 
 			ctx := TaskContext{
+				traceId: msg.GetTraceId(),
 				input:   msg.GetPayload(),
 				baseClt: baseClient,
 				sqlClt:  sqlClient,
