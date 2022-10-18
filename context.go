@@ -1,31 +1,18 @@
 package am
 
 import (
+	"context"
 	"github.com/karfield/am-go-sdk/internal"
-	"time"
 )
 
 type TaskContext struct {
+	context.Context
 	baseClt internal.BaseIpcClient
 	sqlClt  internal.SqlIpcClient
 	ocrClt  internal.OcrIpcClient
 	cdpClt  internal.CdpIpcClient
 	traceId string
 	input   []byte
-}
-
-func (t *TaskContext) Deadline() (deadline time.Time, ok bool) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (t *TaskContext) Done() <-chan struct{} {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (t *TaskContext) Err() error {
-	return nil
 }
 
 type (

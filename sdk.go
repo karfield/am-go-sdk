@@ -95,6 +95,7 @@ func Run(run RunOnce) {
 			}
 
 			ctx := TaskContext{
+				Context: context.Background(),
 				traceId: msg.GetTraceId(),
 				input:   msg.GetPayload(),
 				baseClt: baseClient,
