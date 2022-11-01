@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/karfield/am-go-sdk/internal"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 	"log"
 	"os"
 	"runtime/debug"
@@ -64,14 +62,14 @@ func Run(run RunOnce) {
 		}
 	}
 
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), grpc.WithPerRPCCredentials(ipcCredentials{}))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 
 	baseClient := internal.NewBaseIpcClient(conn)
-	response, err := baseClient.Capabilities(context.Background(), &internal.CapabilitiesRequest{}, metaHeader(nil))
+	response, err := baseClient.Capabilities(context.Background(), &internal.CapabilitiesRequest{}, nil)
 	if err != nil {
 		log.Fatalf("fails to obtain bot capabilities: %s", err)
 	}
@@ -85,7 +83,7 @@ func Run(run RunOnce) {
 		ocrClient = internal.NewOcrIpcClient(conn)
 	}
 
-	if consumer, err := baseClient.ConsumeTask(context.Background(), &internal.ConsumeTaskRequest{}, metaHeader(nil)); err != nil {
+	if consumer, err := baseClient.ConsumeTask(context.Background(), &internal.ConsumeTaskRequest{}, nil); err != nil {
 		log.Fatalf("unable to consume task: %s", err)
 	} else {
 		for {
@@ -108,10 +106,17 @@ func Run(run RunOnce) {
 	}
 }
 
-func metaHeader(ctx context.Context) grpc.CallOption {
-	md := metadata.New(map[string]string{})
-	md.Append("Process-Id", fmt.Sprintf("%d", os.Getpid()))
-	md.Append("Trace-Id", os.Getenv("AM_TRACE_ID"))
-	md.Append("Instance-Id", os.Getenv("AM_INSTANCE_ID"))
-	return grpc.Header(&md)
+type ipcCredentials struct {
+}
+
+func (creds ipcCredentials) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	return map[string]string{
+		"Process-Id":  fmt.Sprintf("%d", os.Getpid()),
+		"Trace-Id":    os.Getenv("AM_TRACE_ID"),
+		"Instance-Id": os.Getenv("AM_INSTANCE_ID"),
+	}, nil
+}
+
+func (creds ipcCredentials) RequireTransportSecurity() bool {
+	return false
 }
