@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/karfield/am-go-sdk/internal"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"os"
 	"runtime/debug"
@@ -62,14 +63,17 @@ func Run(run RunOnce) {
 		}
 	}
 
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), grpc.WithPerRPCCredentials(ipcCredentials{}))
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithPerRPCCredentials(ipcCredentials{}),
+	)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 
 	baseClient := internal.NewBaseIpcClient(conn)
-	response, err := baseClient.Capabilities(context.Background(), &internal.CapabilitiesRequest{}, nil)
+	response, err := baseClient.Capabilities(context.Background(), &internal.CapabilitiesRequest{})
 	if err != nil {
 		log.Fatalf("fails to obtain bot capabilities: %s", err)
 	}
@@ -83,7 +87,7 @@ func Run(run RunOnce) {
 		ocrClient = internal.NewOcrIpcClient(conn)
 	}
 
-	if consumer, err := baseClient.ConsumeTask(context.Background(), &internal.ConsumeTaskRequest{}, nil); err != nil {
+	if consumer, err := baseClient.ConsumeTask(context.Background(), &internal.ConsumeTaskRequest{}); err != nil {
 		log.Fatalf("unable to consume task: %s", err)
 	} else {
 		for {

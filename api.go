@@ -61,7 +61,7 @@ func Log(ctx context.Context, level uint32, message string, extra map[string]int
 				Level:     internal.LogLevel(level),
 				Message:   message,
 				ExtraJson: extraJson,
-			}, nil)
+			})
 			if err != nil {
 				log.Printf("fails to save logs: %s", err)
 			}
@@ -81,7 +81,7 @@ func QuerySql(ctx context.Context, defaultDbCode *string, sql string, args inter
 				}
 			}
 			result, err := clt.QuerySingleSql(context.Background(),
-				&internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode}, nil)
+				&internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode})
 			if err != nil {
 				return nil, fmt.Errorf("fails to query sql: %s, error: %s", sql, err)
 			}
@@ -102,7 +102,7 @@ func ExecuteSql(ctx context.Context, defaultDbCode *string, sql string, args int
 			if err != nil {
 				return 0, 0, fmt.Errorf("failed to marshal arguments error: %s", err)
 			}
-			result, err := clt.ExecuteSingleSql(context.Background(), &internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode}, nil)
+			result, err := clt.ExecuteSingleSql(context.Background(), &internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode})
 			if err != nil {
 				return 0, 0, fmt.Errorf("failed to execute sql: %s, error: %s", sql, err)
 			}
@@ -125,7 +125,7 @@ func ResolveCaptchaImage(ctx context.Context, width, height uint32, format strin
 				Format:   format,
 				Image:    image,
 				Provider: provider,
-			}, nil)
+			})
 			if err != nil {
 				return "", fmt.Errorf("failed to decode captcha image: %s", err)
 			}
@@ -138,7 +138,7 @@ func ResolveCaptchaImage(ctx context.Context, width, height uint32, format strin
 func NewBrowser(ctx context.Context, opts ...chromedp.BrowserOption) (*chromedp.Browser, error) {
 	if value := ctx.Value(cdpClientKey{}); value != nil {
 		if cdpClt, ok := value.(internal.CdpIpcClient); ok {
-			response, err := cdpClt.GetBrowserwsUrl(context.Background(), &internal.GetBrowserWsUrlRequest{}, nil)
+			response, err := cdpClt.GetBrowserwsUrl(context.Background(), &internal.GetBrowserWsUrlRequest{})
 			if err != nil {
 				return nil, fmt.Errorf("fails to get browser ws-url: %E", err)
 			}
