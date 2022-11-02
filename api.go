@@ -58,6 +58,7 @@ func Log(ctx context.Context, level uint32, message string, extra map[string]int
 				}
 			}
 			_, err = clt.SaveLog(context.Background(), &internal.SaveLogRequest{
+				TraceId:   TraceID(ctx),
 				Level:     internal.LogLevel(level),
 				Message:   message,
 				ExtraJson: extraJson,
@@ -81,7 +82,9 @@ func QuerySql(ctx context.Context, defaultDbCode *string, sql string, args inter
 				}
 			}
 			result, err := clt.QuerySingleSql(context.Background(),
-				&internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode})
+				&internal.ExecuteSqlRequest{
+					TraceId: TraceID(ctx),
+					Sql:     sql, JsonArguments: content, DefaultDbCode: defaultDbCode})
 			if err != nil {
 				return nil, fmt.Errorf("fails to query sql: %s, error: %s", sql, err)
 			}
@@ -102,7 +105,9 @@ func ExecuteSql(ctx context.Context, defaultDbCode *string, sql string, args int
 			if err != nil {
 				return 0, 0, fmt.Errorf("failed to marshal arguments error: %s", err)
 			}
-			result, err := clt.ExecuteSingleSql(context.Background(), &internal.ExecuteSqlRequest{Sql: sql, JsonArguments: content, DefaultDbCode: defaultDbCode})
+			result, err := clt.ExecuteSingleSql(context.Background(), &internal.ExecuteSqlRequest{
+				TraceId: TraceID(ctx),
+				Sql:     sql, JsonArguments: content, DefaultDbCode: defaultDbCode})
 			if err != nil {
 				return 0, 0, fmt.Errorf("failed to execute sql: %s, error: %s", sql, err)
 			}
@@ -120,6 +125,7 @@ func ResolveCaptchaImage(ctx context.Context, width, height uint32, format strin
 	if ocrClt := ctx.Value(ocrClientKey{}); ocrClt != nil {
 		if ocrClt, ok := ocrClt.(internal.OcrIpcClient); ok {
 			response, err := ocrClt.ResolveCaptchaImage(context.Background(), &internal.CaptchaImage{
+				TraceId:  TraceID(ctx),
 				Width:    width,
 				Height:   height,
 				Format:   format,
@@ -135,7 +141,7 @@ func ResolveCaptchaImage(ctx context.Context, width, height uint32, format strin
 	return "", nil
 }
 
-func NewBrowser(ctx context.Context, opts ...chromedp.BrowserOption) (*chromedp.Browser, error) {
+func NewCdpBrowser(ctx context.Context, opts ...chromedp.BrowserOption) (*chromedp.Browser, error) {
 	if value := ctx.Value(cdpClientKey{}); value != nil {
 		if cdpClt, ok := value.(internal.CdpIpcClient); ok {
 			response, err := cdpClt.GetBrowserwsUrl(context.Background(), &internal.GetBrowserWsUrlRequest{})
@@ -146,4 +152,22 @@ func NewBrowser(ctx context.Context, opts ...chromedp.BrowserOption) (*chromedp.
 		}
 	}
 	return nil, nil
+}
+
+func NewCdpAllocator(ctx context.Context) (context.Context, context.CancelFunc, error) {
+	if value := ctx.Value(cdpClientKey{}); value != nil {
+		if cdpClt, ok := value.(internal.CdpIpcClient); ok {
+			response, err := cdpClt.GetBrowserDebuggerPort(context.Background(), &internal.GetBrowserDebuggerPortRequest{})
+			if err != nil {
+				return nil, nil, fmt.Errorf("fails to get browser ws-url: %s", err)
+			}
+			ctx, allocatorCancel := chromedp.NewRemoteAllocator(ctx, fmt.Sprintf("http://127.0.0.1:%d/", response.Port))
+			ctx, ctxCancel := chromedp.NewContext(ctx)
+			return ctx, func() {
+				ctxCancel()
+				allocatorCancel()
+			}, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("cannot get cdp client key")
 }

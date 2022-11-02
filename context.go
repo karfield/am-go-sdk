@@ -24,20 +24,20 @@ type (
 	cdpClientKey  struct{}
 )
 
-func (t *TaskContext) Value(key any) any {
+func (ctx *TaskContext) Value(key any) any {
 	switch key.(type) {
 	case traceIdKey:
-		return t.traceId
+		return ctx.traceId
 	case inputKey:
-		return t.input
+		return ctx.input
 	case baseClientKey:
-		return t.baseClt
+		return ctx.baseClt
 	case sqlClientKey:
-		return t.sqlClt
+		return ctx.sqlClt
 	case ocrClientKey:
-		return t.ocrClt
+		return ctx.ocrClt
 	case cdpClientKey:
-		return t.cdpClt
+		return ctx.cdpClt
 	}
 	return nil
 }

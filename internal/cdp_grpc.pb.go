@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CdpIpcClient interface {
+	GetBrowserDebuggerPort(ctx context.Context, in *GetBrowserDebuggerPortRequest, opts ...grpc.CallOption) (*GetBrowserDebuggerPortResponse, error)
 	GetBrowserwsUrl(ctx context.Context, in *GetBrowserWsUrlRequest, opts ...grpc.CallOption) (*GetBrowserWsUrlResponse, error)
 }
 
@@ -31,6 +32,15 @@ type cdpIpcClient struct {
 
 func NewCdpIpcClient(cc grpc.ClientConnInterface) CdpIpcClient {
 	return &cdpIpcClient{cc}
+}
+
+func (c *cdpIpcClient) GetBrowserDebuggerPort(ctx context.Context, in *GetBrowserDebuggerPortRequest, opts ...grpc.CallOption) (*GetBrowserDebuggerPortResponse, error) {
+	out := new(GetBrowserDebuggerPortResponse)
+	err := c.cc.Invoke(ctx, "/cdp_ipc.CdpIpc/GetBrowserDebuggerPort", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *cdpIpcClient) GetBrowserwsUrl(ctx context.Context, in *GetBrowserWsUrlRequest, opts ...grpc.CallOption) (*GetBrowserWsUrlResponse, error) {
@@ -46,6 +56,7 @@ func (c *cdpIpcClient) GetBrowserwsUrl(ctx context.Context, in *GetBrowserWsUrlR
 // All implementations must embed UnimplementedCdpIpcServer
 // for forward compatibility
 type CdpIpcServer interface {
+	GetBrowserDebuggerPort(context.Context, *GetBrowserDebuggerPortRequest) (*GetBrowserDebuggerPortResponse, error)
 	GetBrowserwsUrl(context.Context, *GetBrowserWsUrlRequest) (*GetBrowserWsUrlResponse, error)
 	mustEmbedUnimplementedCdpIpcServer()
 }
@@ -54,6 +65,9 @@ type CdpIpcServer interface {
 type UnimplementedCdpIpcServer struct {
 }
 
+func (UnimplementedCdpIpcServer) GetBrowserDebuggerPort(context.Context, *GetBrowserDebuggerPortRequest) (*GetBrowserDebuggerPortResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBrowserDebuggerPort not implemented")
+}
 func (UnimplementedCdpIpcServer) GetBrowserwsUrl(context.Context, *GetBrowserWsUrlRequest) (*GetBrowserWsUrlResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrowserwsUrl not implemented")
 }
@@ -68,6 +82,24 @@ type UnsafeCdpIpcServer interface {
 
 func RegisterCdpIpcServer(s grpc.ServiceRegistrar, srv CdpIpcServer) {
 	s.RegisterService(&CdpIpc_ServiceDesc, srv)
+}
+
+func _CdpIpc_GetBrowserDebuggerPort_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBrowserDebuggerPortRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CdpIpcServer).GetBrowserDebuggerPort(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cdp_ipc.CdpIpc/GetBrowserDebuggerPort",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CdpIpcServer).GetBrowserDebuggerPort(ctx, req.(*GetBrowserDebuggerPortRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _CdpIpc_GetBrowserwsUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -95,6 +127,10 @@ var CdpIpc_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "cdp_ipc.CdpIpc",
 	HandlerType: (*CdpIpcServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetBrowserDebuggerPort",
+			Handler:    _CdpIpc_GetBrowserDebuggerPort_Handler,
+		},
 		{
 			MethodName: "GetBrowserwsUrl",
 			Handler:    _CdpIpc_GetBrowserwsUrl_Handler,
